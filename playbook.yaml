@@ -2,6 +2,6 @@
 - name: first playbook
   hosts: slave
   tasks:
-    - name: install httpd
+    - name: list
       shell: ls  -lt
 
