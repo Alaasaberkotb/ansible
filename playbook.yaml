@@ -3,5 +3,5 @@
   hosts: slave
   tasks:
     - name: install httpd
-      shell: ls 
+      shell: ls  -lt
 
