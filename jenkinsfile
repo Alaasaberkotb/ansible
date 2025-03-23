@@ -1,18 +1,50 @@
-function authenticate(helper, paramsValues, credentials) {
-    var loginUrl = "https://example.com/login"; 
-    var username = "testuser";  
-    var password = "testpass";
+pipeline {
+    agent any
 
-    var requestUri = new URI(loginUrl, false);
-    var requestMethod = "POST";
-    var requestBody = "username=" + username + "&password=" + password;
+    stages {
+        stage('Create Authentication Script') {
+            steps {
+                script {
+                    def authScript = '''\
+                        function authenticate(helper, paramsValues, credentials) {
+                            var loginUrl = "https://admin-portal-test-loyalty-apps.ocp-test.eg01.etisalat.net/login";
+                            var username = "test";
+                            var password = "Loyalty@1234";
 
-    var requestMessage = helper.prepareMessage();
-    requestMessage.getRequestHeader().setURI(requestUri);
-    requestMessage.getRequestHeader().setMethod(requestMethod);
-    requestMessage.setRequestBody(requestBody);
-    helper.sendAndReceive(requestMessage);
+                            var requestUri = new URI(loginUrl, false);
+                            var requestMethod = "POST";
+                            var requestBody = "username=" + username + "&password=" + password;
 
-    var responseMessage = requestMessage.getResponseBody().toString();
-    return responseMessage.includes("Login Successful");
+                            var requestMessage = helper.prepareMessage();
+                            requestMessage.getRequestHeader().setURI(requestUri);
+                            requestMessage.getRequestHeader().setMethod(requestMethod);
+                            requestMessage.setRequestBody(requestBody);
+                            helper.sendAndReceive(requestMessage);
+
+                            var responseMessage = requestMessage.getResponseBody().toString();
+                            return responseMessage.includes("Login Successful");
+                        }
+                    '''.stripIndent()
+
+                    // Write to file
+                    writeFile file: 'auth-script.js', text: authScript
+
+                    // Debug: Show file contents in Jenkins logs
+                    bat 'type auth-script.js'
+                }
+            }
+        }
+
+        stage('Copy Script to OWASP ZAP') {
+            steps {
+                script {
+                    if (fileExists('auth-script.js')) {
+                        bat 'docker cp auth-script.js owasp:/zap/scripts/'
+                    } else {
+                        error "auth-script.js was not created!"
+                    }
+                }
+            }
+        }
+    }
 }
